@@ -1,0 +1,36 @@
+{
+  "name": "rss-service-backend",
+  "version": "1.0.0",
+  "description": "RSS订阅服务后端",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "init-db": "node src/utils/initDatabase.js",
+    "migrate-scripts": "node src/utils/migrateScripts.js"
+  },
+  "dependencies": {
+    "axios": "^1.5.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "node-cron": "^3.0.2",
+    "openai": "^5.20.1",
+    "rss-parser": "^3.13.0",
+    "sqlite3": "^5.1.6",
+    "vm2": "^3.9.19"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "rss",
+    "subscription",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "MIT"
+}
