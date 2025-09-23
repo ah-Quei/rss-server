@@ -193,13 +193,7 @@
           <div v-if="result.result.action === 'keep'">
             <p><strong>操作：</strong> 保留文章</p>
             <div class="article-preview">
-              <p><strong>标题：</strong> {{ result.result.article.title }}</p>
-              <p><strong>链接：</strong> 
-                <a :href="result.result.article.link" target="_blank">{{ result.result.article.link }}</a>
-              </p>
-              <p><strong>描述：</strong> 
-                <span class="truncated-text">{{ result.result.article.description }}</span>
-              </p>
+              {{ result.result}}
             </div>
             <p v-if="result.result.webhook"><strong>Webhook：</strong> 已触发</p>
           </div>

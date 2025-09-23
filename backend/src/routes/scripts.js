@@ -83,6 +83,7 @@ router.post('/test', authenticateToken, async (req, res) => {
     const results = [];
     for (const article of testArticles) {
       try {
+        
         const result = await scriptService.executeScript(script, article, article.rawItem);
         results.push({
           articleId: article.id,

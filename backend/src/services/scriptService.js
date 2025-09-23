@@ -226,7 +226,7 @@ class ScriptService {
         }
         
         // 执行处理函数
-        processArticle(article);
+        processArticle(article, rawItem);
       `;
 
       // 设置文章数据到沙箱
@@ -240,11 +240,8 @@ class ScriptService {
         guid: article.guid,
         feed_id: article.feed_id
       };
-      
-      // 设置原始XML解析对象到沙箱（如果提供）
-      if (rawItem) {
-        vm.sandbox.rawItem = rawItem;
-      }
+
+       vm.sandbox.rawItem = rawItem;
 
       // 执行脚本
       const result = await vm.run(wrappedScript);
