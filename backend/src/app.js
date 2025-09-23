@@ -17,7 +17,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 中间件
-app.use(helmet());
+// app.use(helmet());
+// 中间件
+app.use(helmet({
+  contentSecurityPolicy: false, // 禁用 CSP，避免资源加载问题
+  hsts: false, // 禁用 HSTS，避免强制 HTTPS
+  crossOriginEmbedderPolicy: false, // 禁用跨域嵌入策略
+  crossOriginOpenerPolicy: false // 禁用 COOP，避免不可信来源警告
+}));
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
