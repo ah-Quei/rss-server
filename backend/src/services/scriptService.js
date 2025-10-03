@@ -3,6 +3,8 @@ const axios = require('axios');
 const database = require('../utils/database');
 const OpenAI = require('openai');
 const crypto = require('crypto');
+const { JSDOM } = require('jsdom');
+const { Readability } = require('@mozilla/readability');
 
 class ScriptService {
   constructor() {
@@ -37,6 +39,8 @@ class ScriptService {
         RegExp: RegExp,
         // 提供URL处理
         URL: URL,
+        // 提供HTML解析文本功能
+        html: this.createHtmlFunction(),
         // 提供Buffer处理（受限）
         Buffer: {
           from: Buffer.from.bind(Buffer),
@@ -208,6 +212,30 @@ class ScriptService {
         return crypto.createHmac(algorithm, key).update(data).digest('hex');
       }
     };
+  }
+
+  // 新增：HTML 文本抽取工具
+  createHtmlFunction() {
+    // Readability + JSDOM：更准确的正文抽取
+    const toText = (html, options = {}) => {
+      try {
+        if (!html || typeof html !== 'string') return '';
+        const baseUrl = options.url || 'https://example.com/';
+        const dom = new JSDOM(html, { url: baseUrl });
+        const reader = new Readability(dom.window.document);
+        const article = reader.parse(); // { title, byline, content(html), textContent }
+        if (article && article.textContent) {
+          return article.textContent.trim();
+        }
+        // Fallback：若解析失败，则使用 body 的纯文本
+        const fallback = dom.window.document.body?.textContent || '';
+        return fallback.trim();
+      } catch (e) {
+        return '';
+      }
+    };
+
+    return toText;
   }
 
   // 执行用户脚本
