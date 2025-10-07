@@ -141,9 +141,9 @@ class BaseModel {
       const sql = `INSERT INTO ${this.tableName} (${fields.join(', ')}) VALUES (${placeholders})`;
       
       const result = await database.run(sql, Object.values(data));
-      logger.logDatabase('INSERT', this.tableName, { id: result.lastID });
+      logger.logDatabase('INSERT', this.tableName, { id: result.id });
       
-      return result.lastID;
+      return result.id;
     } catch (error) {
       logger.error(`Error creating ${this.tableName}`, { error: error.message, data });
       throw error;
