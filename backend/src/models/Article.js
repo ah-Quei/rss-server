@@ -137,7 +137,8 @@ class Article extends BaseModel {
         const result = await super.rawQuery(`
             SELECT COUNT(*) as total,
                    COUNT(CASE WHEN is_read = 1 THEN 1 END) as read,
-        COUNT(CASE WHEN is_read = 0 THEN 1 END) as unread
+                   COUNT(CASE WHEN is_read = 0 THEN 1 END) as unread,
+                   COUNT(CASE WHEN processed = 1 THEN 1 END) as processed
             FROM articles a
                 JOIN feeds f
             ON a.feed_id = f.id
@@ -148,7 +149,8 @@ class Article extends BaseModel {
         return {
             total: stats.total || 0,
             read: stats.read || 0,
-            unread: stats.unread || 0
+            unread: stats.unread || 0,
+            processed: stats.processed || 0
         };
     }
 
