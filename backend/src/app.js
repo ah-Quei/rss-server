@@ -13,8 +13,11 @@ const articleRoutes = require('./routes/articles');
 const scriptRoutes = require('./routes/scripts');
 const cronRoutes = require('./routes/cron');
 
+// 顶部变量（确保存在）
 const app = express();
 const PORT = process.env.PORT || 3000;
+let server;
+let isShuttingDown = false;
 
 // 中间件
 // app.use(helmet());
@@ -77,7 +80,7 @@ async function startServer() {
     // 格式: 2025-09-22 13:25:30
     console.log(`启动时间：${formatted}`);
 
-    app.listen(PORT, () => {
+    server = app.listen(PORT, () => {
       console.log(`服务器运行在端口 ${PORT}`);
     });
   } catch (error) {
@@ -89,10 +92,30 @@ async function startServer() {
 startServer();
 
 // 优雅关闭
-process.on('SIGINT', async () => {
-  console.log('正在关闭服务器...');
-  // 停止定时任务
-  cronService.stop();
-  await database.close();
-  process.exit(0);
-});
+const gracefulShutdown = async (signal) => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  console.log(`[${signal}] 正在优雅关闭...`);
+  try {
+    // 停止定时任务
+    cronService.stop();
+
+    // 关闭 HTTP 服务器，等待现有连接完成
+    if (server && typeof server.close === 'function') {
+      await new Promise((resolve) => server.close(resolve));
+    }
+
+    // 关闭数据库
+    await database.close();
+
+    console.log('资源清理完成，准备退出');
+    process.exit(0);
+  } catch (err) {
+    console.error('优雅关闭时发生错误:', err);
+    process.exit(1);
+  }
+};
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

@@ -261,40 +261,21 @@ const asyncHandler = (fn) => {
 /**
  * 进程异常处理
  */
-const setupProcessHandlers = () => {
-  // 捕获未处理的Promise拒绝
+function setupProcessHandlers() {
   process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Promise Rejection', {
       reason: reason?.message || reason,
       stack: reason?.stack,
-      promise: promise.toString()
+      promise: promise?.toString?.()
     });
-    
-    // 优雅关闭服务器
-    process.exit(1);
+    // 不再强制退出；保留服务以便继续运行并人工排查
   });
 
-  // 捕获未捕获的异常
   process.on('uncaughtException', (error) => {
     logger.error('Uncaught Exception', {
       message: error.message,
       stack: error.stack
     });
-    
-    // 优雅关闭服务器
-    process.exit(1);
-  });
-
-  // 捕获SIGTERM信号
-  process.on('SIGTERM', () => {
-    logger.info('SIGTERM received, shutting down gracefully');
-    process.exit(0);
-  });
-
-  // 捕获SIGINT信号
-  process.on('SIGINT', () => {
-    logger.info('SIGINT received, shutting down gracefully');
-    process.exit(0);
   });
 };
 
