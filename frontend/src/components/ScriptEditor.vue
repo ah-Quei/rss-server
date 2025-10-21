@@ -542,7 +542,7 @@ const deleteScript = async () => {
     await loadScripts()
     
     // 重置为自定义脚本
-    scriptContent.value = '// 在此编写您的脚本\nfunction processArticle(article, rawItem) {\n  // 示例：保留所有文章\n  return {\n    action: \'keep\',\n    article: article\n  };\n}'
+    scriptContent.value = '// 在此编写您的脚本\nfunction processArticle(article, rawItem) {\n  // 示例：保留所有文章\n  return {\n    action: \'keep\',\n    article: article,\n    rawItem: rawItem\n  };\n}'
     selectedTemplate.value = { id: 'custom', name: '自定义脚本' }
     emit('update:modelValue', scriptContent.value)
     
