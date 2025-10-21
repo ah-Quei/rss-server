@@ -1,20 +1,11 @@
-const Parser = require('rss-parser');
 const axios = require('axios');
 const Article = require('../models/Article');
 const Feed = require('../models/Feed');
 const Script = require('../models/Script');
 const scriptService = require('./scriptService');
+const {parseRss} = require("../utils/rssPharse");
 
 class RssService {
-  constructor() {
-    this.parser = new Parser({
-      timeout: 10000,
-      headers: {
-        'User-Agent': 'RSS-Service/1.0'
-      }
-    });
-  }
-
   // 验证RSS URL是否有效
   async validateRssUrl(url) {
     try {
@@ -29,8 +20,7 @@ class RssService {
         throw new Error('无法访问RSS源');
       }
 
-      // 尝试解析RSS内容
-      await this.parser.parseString(response.data);
+      await parseRss(url);
       return true;
     } catch (error) {
       throw new Error(`RSS验证失败: ${error.message}`);
@@ -42,33 +32,24 @@ class RssService {
     try {
       console.log(`开始获取订阅源: ${feed.title} (${feed.url})`);
       
-      const parsedFeed = await this.parser.parseURL(feed.url);
+      const articles = await parseRss(feed.url);
       let newArticles = 0;
       let savedArticles = [];
 
-      for (const item of parsedFeed.items) {
+      for (const article of articles) {
         try {
           // 检查文章是否已存在（通过guid或链接）
-          const existingArticle = await Article.findByGuidOrLink(feed.id, item.guid || item.link || '');
+          const existingArticle = await Article.findByGuidOrLink(feed.id, article.guid || article.link || '');
           
           // 如果文章已存在，跳过
           if (existingArticle) {
             continue;
           }
-          
-          // 创建文章数据
-          const articleData = {
-            feedId: feed.id,
-            title: item.title || '无标题',
-            link: item.link || '',
-            description: item.description|| item.summary||item.contentSnippet || item.content  || '',
-            pubDate: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
-            guid: item.guid || item.link || '',
-            content: item.content || ''
-          };
+
+          article['feedId'] = feed.id;
 
           // 保存文章到数据库
-          const articleId = await Article.create(articleData);
+          const articleId = await Article.create(article);
           
           if (articleId) {
             // 获取完整的文章对象
@@ -83,7 +64,7 @@ class RssService {
                 const scriptObj = await Script.findById(feed.script_id);
                 
                 if (scriptObj && scriptObj.script) {
-                  const result = await scriptService.executeScript(scriptObj.script, savedArticle, item);
+                  const result = await scriptService.executeScript(scriptObj.script, savedArticle, JSON.parse(savedArticle.raw_json));
                   
                   // 记录脚本执行日志
                   await scriptService.logExecution(feed.id, scriptObj.script, result, null);

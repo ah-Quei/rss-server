@@ -4,7 +4,7 @@ const Article = require('../models/Article');
 const Script = require('../models/Script');
 const { authenticateToken } = require('../middleware/auth');
 const scriptService = require('../services/scriptService');
-const Parser = require("rss-parser");
+const {parseRss} = require("../utils/rssPharse");
 
 const router = express.Router();
 
@@ -38,38 +38,18 @@ router.post('/test', authenticateToken, async (req, res) => {
       // 如果使用了分页，提取data字段；否则直接使用结果
       testArticles = result.data ? result.data : result;
     } else if (url) {
-        testArticles = []
-        let parser = new Parser({
-            timeout: 10000,
-            headers: {
-                'User-Agent': 'RSS-Service/1.0'
-            }
-        });
+
         //在添加订阅源时候的测试，此时还没抓取,因此没有feedId
-        const parsedFeed = await parser.parseURL(url);
+        const articles = await parseRss(url);
 
-        for (const item of parsedFeed.items.slice(0, 5)) {
-            // 创建文章数据
-            const articleData = {
-                feedId: null,
-                title: item.title || '无标题',
-                link: item.link || '',
-                description: item.description|| item.summary||item.contentSnippet || item.content  || '',
-                pubDate: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
-                guid: item.guid || item.link || '',
-                content: item.content || '',
-                rawItem: item // 保存原始item对象
-            };
+        testArticles = articles.slice(0, 5)
 
-            testArticles.push(articleData)
-        }
     } else {
       return res.status(400).json({ 
         success: false,
         message: '需要提供feedId或url参数' 
       });
     }
-
 
 
     if (!testArticles || !Array.isArray(testArticles) || testArticles.length === 0) {
@@ -84,7 +64,7 @@ router.post('/test', authenticateToken, async (req, res) => {
     for (const article of testArticles) {
       try {
         
-        const result = await scriptService.executeScript(script, article, article.rawItem);
+        const result = await scriptService.executeScript(script, article, JSON.parse(article.rawJson||article.raw_json));
         results.push({
           articleId: article.id,
           articleTitle: article.title,

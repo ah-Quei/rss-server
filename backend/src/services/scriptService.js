@@ -268,7 +268,7 @@ class ScriptService {
         guid: article.guid,
         feed_id: article.feed_id
       };
-
+      
        vm.sandbox.rawItem = rawItem;
 
       // 执行脚本

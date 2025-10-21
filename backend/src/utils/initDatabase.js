@@ -166,6 +166,7 @@ async function initDatabase() {
         link TEXT,
         description TEXT,
         content TEXT,
+        raw_json TEXT,
         pub_date DATETIME,
         guid VARCHAR(255),
         processed BOOLEAN DEFAULT FALSE,
