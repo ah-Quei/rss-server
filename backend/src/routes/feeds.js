@@ -2,6 +2,7 @@ const express = require('express');
 const Feed = require('../models/Feed');
 const { authenticateToken } = require('../middleware/auth');
 const rssService = require('../services/rssService');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ router.get('/validate', authenticateToken, async (req, res) => {
             message: 'RSS源验证成功'
         });
     } catch (error) {
-        console.error('验证RSS URL错误:', error);
+        logger.error('验证RSS URL错误:', { error });
         res.status(400).json({
             success: false,
             message: error.message || '无效的RSS URL或无法访问'
@@ -49,7 +50,7 @@ router.get('/', authenticateToken, async (req, res) => {
     const feeds = result.data ? result.data : result;
     res.json({ feeds });
   } catch (error) {
-    console.error('获取订阅源错误:', error);
+    logger.error('获取订阅源错误:', { error });
     res.status(500).json({ error: '获取订阅源失败' });
   }
 });
@@ -87,7 +88,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const feed = await Feed.findById(feedId, req.user.id);
     res.status(201).json({ message: '订阅源创建成功', feed });
   } catch (error) {
-    console.error('创建订阅源错误:', error);
+    logger.error('创建订阅源错误:', { error });
     res.status(500).json({ error: '创建订阅源失败' });
   }
 });
@@ -103,7 +104,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
     res.json({ feed });
   } catch (error) {
-    console.error('获取订阅源错误:', error);
+    logger.error('获取订阅源错误:', { error });
     res.status(500).json({ error: '获取订阅源失败' });
   }
 });
@@ -144,7 +145,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const updatedFeed = await Feed.findById(req.params.id, req.user.id);
     res.json({ message: '订阅源更新成功', feed: updatedFeed });
   } catch (error) {
-    console.error('更新订阅源错误:', error);
+    logger.error('更新订阅源错误:', { error });
     res.status(500).json({ error: '更新订阅源失败' });
   }
 });
@@ -160,7 +161,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     await Feed.delete(req.params.id, req.user.id);
     res.json({ message: '订阅源删除成功' });
   } catch (error) {
-    console.error('删除订阅源错误:', error);
+    logger.error('删除订阅源错误:', { error });
     res.status(500).json({ error: '删除订阅源失败' });
   }
 });
@@ -180,7 +181,7 @@ router.post('/:id/refresh', authenticateToken, async (req, res) => {
       lastFetch: new Date().toISOString()
     });
   } catch (error) {
-    console.error('刷新订阅源错误:', error);
+    logger.error('刷新订阅源错误:', { error });
     res.status(500).json({ error: '刷新订阅源失败' });
   }
 });
@@ -191,7 +192,7 @@ router.get('/categories/list', authenticateToken, async (req, res) => {
     const categories = await Feed.getCategories(req.user.id);
     res.json({ categories });
   } catch (error) {
-    console.error('获取分类错误:', error);
+    logger.error('获取分类错误:', { error });
     res.status(500).json({ error: '获取分类失败' });
   }
 });

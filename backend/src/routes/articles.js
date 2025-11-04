@@ -2,6 +2,7 @@ const express = require('express');
 const Article = require('../models/Article');
 const Feed = require('../models/Feed');
 const { authenticateToken } = require('../middleware/auth');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -51,7 +52,7 @@ router.get('/', authenticateToken, async (req, res) => {
       limit: parseInt(limit)
     });
   } catch (error) {
-    console.error('获取文章错误:', error);
+    logger.error('获取文章错误:', { error });
     res.status(500).json({ error: '获取文章失败' });
   }
 });
@@ -73,7 +74,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
     res.json({ article });
   } catch (error) {
-    console.error('获取文章详情错误:', error);
+    logger.error('获取文章详情错误:', { error });
     res.status(500).json({ error: '获取文章详情失败' });
   }
 });
@@ -96,7 +97,7 @@ router.put('/:id/read', authenticateToken, async (req, res) => {
     await Article.markAsRead(req.params.id);
     res.json({ message: '文章已标记为已读' });
   } catch (error) {
-    console.error('标记文章已读错误:', error);
+    logger.error('标记文章已读错误:', { error });
     res.status(500).json({ error: '标记文章已读失败' });
   }
 });
@@ -119,7 +120,7 @@ router.put('/:id/unread', authenticateToken, async (req, res) => {
     await Article.markAsUnread(req.params.id);
     res.json({ message: '文章已标记为未读' });
   } catch (error) {
-    console.error('标记文章未读错误:', error);
+    logger.error('标记文章未读错误:', { error });
     res.status(500).json({ error: '标记文章未读失败' });
   }
 });
@@ -142,7 +143,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     await Article.delete(req.params.id);
     res.json({ message: '文章删除成功' });
   } catch (error) {
-    console.error('删除文章错误:', error);
+    logger.error('删除文章错误:', { error });
     res.status(500).json({ error: '删除文章失败' });
   }
 });
@@ -153,7 +154,7 @@ router.get('/stats/summary', authenticateToken, async (req, res) => {
     const stats = await Article.getStats(req.user.id);
     res.json({ stats });
   } catch (error) {
-    console.error('获取文章统计错误:', error);
+    logger.error('获取文章统计错误:', { error });
     res.status(500).json({ error: '获取文章统计失败' });
   }
 });
@@ -180,7 +181,7 @@ router.put('/batch/read', authenticateToken, async (req, res) => {
 
     res.json({ message: '批量标记完成' });
   } catch (error) {
-    console.error('批量标记文章已读错误:', error);
+    logger.error('批量标记文章已读错误:', { error });
     res.status(500).json({ error: '批量标记文章已读失败' });
   }
 });

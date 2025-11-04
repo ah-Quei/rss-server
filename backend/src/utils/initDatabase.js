@@ -1,6 +1,7 @@
 const database = require('./database');
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 
 // 系统模板定义
 const systemTemplates = [
@@ -95,7 +96,7 @@ function processArticle(article, rawItem) {
 
 async function initDatabase() {
   try {
-    console.log('开始初始化数据库...');
+    logger.info('开始初始化数据库...');
     
     // 确保数据库目录存在
     const dbDir = path.dirname(path.join(__dirname, '../../database/rss_service.db'));
@@ -105,7 +106,7 @@ async function initDatabase() {
 
     // 连接数据库
     await database.connect();
-    console.log('数据库连接成功');
+    logger.info('数据库连接成功');
 
     // 创建用户表
     await database.run(`
@@ -117,7 +118,7 @@ async function initDatabase() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('用户表创建完成');
+    logger.info('用户表创建完成');
 
     // 创建脚本表
     await database.run(`
@@ -133,7 +134,7 @@ async function initDatabase() {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
       )
     `);
-    console.log('脚本表创建完成');
+    logger.info('脚本表创建完成');
 
     // 创建订阅源表
     await database.run(`
@@ -155,7 +156,7 @@ async function initDatabase() {
         FOREIGN KEY (script_id) REFERENCES scripts (id) ON DELETE SET NULL
       )
     `);
-    console.log('订阅源表创建完成');
+    logger.info('订阅源表创建完成');
 
     // 创建文章表
     await database.run(`
@@ -175,7 +176,7 @@ async function initDatabase() {
         FOREIGN KEY (feed_id) REFERENCES feeds (id) ON DELETE CASCADE
       )
     `);
-    console.log('文章表创建完成');
+    logger.info('文章表创建完成');
 
     // 创建脚本执行日志表
     await database.run(`
@@ -189,7 +190,7 @@ async function initDatabase() {
         FOREIGN KEY (feed_id) REFERENCES feeds (id) ON DELETE CASCADE
       )
     `);
-    console.log('脚本日志表创建完成');
+    logger.info('脚本日志表创建完成');
 
     // 创建索引以提高查询性能
     await database.run('CREATE INDEX IF NOT EXISTS idx_feeds_user_id ON feeds (user_id)');
@@ -202,10 +203,10 @@ async function initDatabase() {
     await database.run('CREATE INDEX IF NOT EXISTS idx_script_logs_feed_id ON script_logs (feed_id)');
     await database.run('CREATE INDEX IF NOT EXISTS idx_scripts_user_id ON scripts (user_id)');
     await database.run('CREATE INDEX IF NOT EXISTS idx_scripts_is_template ON scripts (is_template)');
-    console.log('数据库索引创建完成');
+    logger.info('数据库索引创建完成');
 
     // 插入系统模板
-    console.log('开始插入系统模板...');
+    logger.info('开始插入系统模板...');
     const existingTemplates = await database.all('SELECT * FROM scripts WHERE is_template = 1');
     
     if (existingTemplates.length === 0) {
@@ -214,17 +215,17 @@ async function initDatabase() {
           'INSERT INTO scripts (user_id, name, description, script, is_template, created_at, updated_at) VALUES (?, ?, ?, ?, 1, datetime("now"), datetime("now"))',
           [1, template.name, template.description, template.script]
         );
-        console.log(`插入系统模板: ${template.name}`);
+        logger.info(`插入系统模板: ${template.name}`);
       }
-      console.log('系统模板插入完成');
+      logger.info('系统模板插入完成');
     } else {
-      console.log(`已存在 ${existingTemplates.length} 个系统模板，跳过插入`);
+      logger.info(`已存在 ${existingTemplates.length} 个系统模板，跳过插入`);
     }
 
-    console.log('数据库初始化完成！');
+    logger.info('数据库初始化完成！');
     
   } catch (error) {
-    console.error('数据库初始化失败:', error);
+    logger.error('数据库初始化失败:', { error });
     throw error;
   } finally {
     await database.close();
@@ -235,11 +236,11 @@ async function initDatabase() {
 if (require.main === module) {
   initDatabase()
     .then(() => {
-      console.log('数据库初始化成功');
+      logger.info('数据库初始化成功');
       process.exit(0);
     })
     .catch((error) => {
-      console.error('数据库初始化失败:', error);
+      logger.error('数据库初始化失败:', { error });
       process.exit(1);
     });
 }

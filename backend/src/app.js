@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
 require('dotenv').config();
+const logger = require('./utils/logger');
 
 const database = require('./utils/database');
 const cronService = require('./services/cronService');
@@ -66,11 +67,11 @@ setupProcessHandlers();
 async function startServer() {
   try {
     await database.connect();
-    console.log('数据库连接成功');
+    logger.info('数据库连接成功');
 
     // 启动定时任务服务
     cronService.start();
-    console.log('定时任务服务已启动');
+    logger.info('定时任务服务已启动');
 
     const now = new Date();
     const formatted = now.toLocaleString('zh-CN', {
@@ -78,13 +79,13 @@ async function startServer() {
       timeZone: 'Asia/Shanghai' // 保证固定为北京时间
     });
     // 格式: 2025-09-22 13:25:30
-    console.log(`启动时间：${formatted}`);
+    logger.info(`启动时间：${formatted}`);
 
     server = app.listen(PORT, () => {
-      console.log(`服务器运行在端口 ${PORT}`);
+      logger.info(`服务器运行在端口 ${PORT}`);
     });
   } catch (error) {
-    console.error('启动服务器失败:', error);
+    logger.error('启动服务器失败:', { error });
     process.exit(1);
   }
 }
@@ -96,7 +97,7 @@ const gracefulShutdown = async (signal) => {
   if (isShuttingDown) return;
   isShuttingDown = true;
 
-  console.log(`[${signal}] 正在优雅关闭...`);
+  logger.info(`[${signal}] 正在优雅关闭...`);
   try {
     // 停止定时任务
     cronService.stop();
@@ -109,10 +110,10 @@ const gracefulShutdown = async (signal) => {
     // 关闭数据库
     await database.close();
 
-    console.log('资源清理完成，准备退出');
+    logger.info('资源清理完成，准备退出');
     process.exit(0);
   } catch (err) {
-    console.error('优雅关闭时发生错误:', err);
+    logger.error('优雅关闭时发生错误:', { error: err });
     process.exit(1);
   }
 };

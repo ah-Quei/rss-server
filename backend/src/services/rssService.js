@@ -4,6 +4,7 @@ const Feed = require('../models/Feed');
 const Script = require('../models/Script');
 const scriptService = require('./scriptService');
 const {parseRss} = require("../utils/rssPharse");
+const logger = require('../utils/logger');
 
 class RssService {
   // 验证RSS URL是否有效
@@ -30,7 +31,7 @@ class RssService {
   // 获取单个订阅源的内容
   async fetchFeed(feed) {
     try {
-      console.log(`开始获取订阅源: ${feed.title} (${feed.url})`);
+      logger.debug(`开始获取订阅源: ${feed.title} (${feed.url})`);
       
       const articles = await parseRss(feed.url);
       let newArticles = 0;
@@ -72,7 +73,7 @@ class RssService {
                   // 根据脚本结果处理文章
                   if (result.action === 'filter') {
                     await Article.delete(articleId);
-                    console.log(`文章被脚本过滤: ${savedArticle.title}`);
+                    logger.debug(`文章被脚本过滤: ${savedArticle.title}`);
                     // 从已保存文章列表中移除
                     savedArticles = savedArticles.filter(a => a.id !== articleId);
                   } else if (result.action === 'keep' && result.article) {
@@ -82,7 +83,7 @@ class RssService {
                   }
                 }
               } catch (scriptError) {
-                console.error(`脚本执行错误 (Feed: ${feed.id}):`, scriptError);
+                logger.error(`脚本执行错误 (Feed: ${feed.id}):`, { error: scriptError });
                 const scriptObj = await Script.findById(feed.script_id);
                 await scriptService.logExecution(feed.id, scriptObj ? scriptObj.script : '', null, scriptError.message);
               }
@@ -91,14 +92,14 @@ class RssService {
             newArticles++;
           }
         } catch (articleError) {
-          console.error(`保存文章错误 (Feed: ${feed.id}):`, articleError);
+          logger.error(`保存文章错误 (Feed: ${feed.id}):`, { error: articleError });
         }
       }
 
       // 更新订阅源的最后获取时间
       await Feed.updateLastFetch(feed.id, 'success');
       
-      console.log(`订阅源 ${feed.title} 获取完成，新增 ${newArticles} 篇文章`);
+      logger.info(`订阅源 ${feed.title} 获取完成，新增 ${newArticles} 篇文章`);
       return { 
         success: true, 
         newArticles,
@@ -106,7 +107,7 @@ class RssService {
       };
 
     } catch (error) {
-      console.error(`获取订阅源失败 (${feed.title}):`, error);
+      logger.error(`获取订阅源失败 (${feed.title}):`, { error });
       
       // 更新订阅源状态为错误
       await Feed.updateLastFetch(feed.id, 'error', error.message);
@@ -119,7 +120,7 @@ class RssService {
   async fetchAllFeeds() {
     try {
       const activeFeeds = await Feed.getActiveFeeds();
-      console.log(`开始获取 ${activeFeeds.length} 个活跃订阅源`);
+      logger.info(`开始获取 ${activeFeeds.length} 个活跃订阅源`);
 
       const results = [];
       
@@ -157,7 +158,7 @@ class RssService {
       const successCount = results.filter(r => r.success).length;
       const totalArticles = results.reduce((sum, r) => sum + (r.newArticles || 0), 0);
       
-      console.log(`所有订阅源获取完成: ${successCount}/${activeFeeds.length} 成功，共新增 ${totalArticles} 篇文章`);
+      logger.info(`所有订阅源获取完成: ${successCount}/${activeFeeds.length} 成功，共新增 ${totalArticles} 篇文章`);
       
       return {
         total: activeFeeds.length,
@@ -168,7 +169,7 @@ class RssService {
       };
 
     } catch (error) {
-      console.error('批量获取订阅源失败:', error);
+      logger.error('批量获取订阅源失败:', { error });
       throw error;
     }
   }
@@ -185,10 +186,10 @@ class RssService {
         [cutoffDate.toISOString()]
       );
 
-      console.log(`清理完成，删除了 ${result.changes} 篇旧文章`);
+      logger.info(`清理完成，删除了 ${result.changes} 篇旧文章`);
       return result.changes;
     } catch (error) {
-      console.error('清理旧文章失败:', error);
+      logger.error('清理旧文章失败:', { error });
       throw error;
     }
   }

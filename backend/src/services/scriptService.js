@@ -5,6 +5,7 @@ const OpenAI = require('openai');
 const crypto = require('crypto');
 const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
+const logger = require('../utils/logger');
 
 class ScriptService {
   constructor() {
@@ -12,9 +13,9 @@ class ScriptService {
       timeout: 5000, // 5秒超时
       sandbox: {
         console: {
-          log: (...args) => console.log('[Script]', ...args),
-          error: (...args) => console.error('[Script]', ...args),
-          warn: (...args) => console.warn('[Script]', ...args)
+          log: (...args) => this._logFromScript('info', args),
+          error: (...args) => this._logFromScript('error', args),
+          warn: (...args) => this._logFromScript('warn', args)
         },
         // 提供webhook功能
         webhook: this.createWebhookFunction(),
@@ -48,6 +49,21 @@ class ScriptService {
         }
       }
     };
+  }
+
+  _logFromScript(level, args) {
+    try {
+      const msg = args.map(a => {
+        if (typeof a === 'string') return a;
+        try { return JSON.stringify(a); } catch { return String(a); }
+      }).join(' ');
+      const text = `[Script] ${msg}`;
+      if (level === 'error') return logger.error(text);
+      if (level === 'warn') return logger.warn(text);
+      return logger.info(text);
+    } catch (e) {
+      logger.warn('脚本日志序列化失败', { error: e });
+    }
   }
 
   // 创建安全的webhook函数
@@ -286,7 +302,7 @@ class ScriptService {
       return result;
 
     } catch (error) {
-      console.error('脚本执行错误:', error);
+      logger.error('脚本执行错误:', { error });
       throw new Error(`脚本执行失败: ${error.message}`);
     }
   }
@@ -304,7 +320,7 @@ class ScriptService {
         ]
       );
     } catch (error) {
-      console.error('记录脚本日志失败:', error);
+      logger.error('记录脚本日志失败:', { error });
     }
   }
 
@@ -327,7 +343,7 @@ class ScriptService {
         createdAt: log.created_at
       }));
     } catch (error) {
-      console.error('获取脚本日志失败:', error);
+      logger.error('获取脚本日志失败:', { error });
       throw error;
     }
   }
@@ -343,10 +359,10 @@ class ScriptService {
         [cutoffDate.toISOString()]
       );
 
-      console.log(`清理完成，删除了 ${result.changes} 条脚本日志`);
+      logger.info(`清理完成，删除了 ${result.changes} 条脚本日志`);
       return result.changes;
     } catch (error) {
-      console.error('清理脚本日志失败:', error);
+      logger.error('清理脚本日志失败:', { error });
       throw error;
     }
   }

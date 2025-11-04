@@ -3,6 +3,7 @@ const rssService = require('./rssService');
 const scriptService = require('./scriptService');
 const Feed = require('../models/Feed');
 const database = require('../utils/database');
+const logger = require('../utils/logger');
 
 class CronService {
   constructor() {
@@ -14,22 +15,22 @@ class CronService {
   // 启动定时任务
   async start() {
     if (this.isRunning) {
-      console.log('定时任务已在运行中');
+      logger.info('定时任务已在运行中');
       return;
     }
 
-    console.log('启动RSS定时任务服务');
+    logger.info('启动RSS定时任务服务');
 
     // 初始化所有订阅源的定时任务
     await this.initializeFeedJobs();
 
     // 每小时检查一次是否有新的订阅源或更新的刷新间隔
     const checkFeedsJob = cron.schedule('0 * * * *', async () => {
-      console.log('检查订阅源更新');
+      logger.debug('检查订阅源更新');
       try {
         await this.updateFeedJobs();
       } catch (error) {
-        console.error('检查订阅源更新失败:', error);
+        logger.error('检查订阅源更新失败:', { error });
       }
     }, {
       scheduled: false
@@ -37,7 +38,7 @@ class CronService {
 
     // 每天凌晨2点清理旧数据
     const cleanupJob = cron.schedule('0 2 * * *', async () => {
-      console.log('开始清理旧数据');
+      logger.info('开始清理旧数据');
       try {
         // 清理30天前的文章
         await rssService.cleanupOldArticles(30);
@@ -45,9 +46,9 @@ class CronService {
         // 清理7天前的脚本日志
         await scriptService.cleanupOldLogs(7);
         
-        console.log('旧数据清理完成');
+        logger.info('旧数据清理完成');
       } catch (error) {
-        console.error('清理旧数据失败:', error);
+        logger.error('清理旧数据失败:', { error });
       }
     }, {
       scheduled: false
@@ -61,15 +62,15 @@ class CronService {
     this.jobs.set('cleanup', cleanupJob);
     this.isRunning = true;
 
-    console.log('定时任务启动成功');
-    console.log('- 订阅源检查任务: 每小时执行一次');
-    console.log('- 数据清理任务: 每天凌晨2点执行');
+    logger.info('定时任务启动成功');
+    logger.debug('- 订阅源检查任务: 每小时执行一次');
+    logger.debug('- 数据清理任务: 每天凌晨2点执行');
   }
   
   // 初始化所有订阅源的定时任务
   async initializeFeedJobs() {
     try {
-      console.log('初始化订阅源定时任务');
+      logger.info('初始化订阅源定时任务');
       // 获取所有活跃的订阅源
       const feeds = await database.all('SELECT * FROM feeds WHERE status = ?', ['active']);
       
@@ -77,9 +78,9 @@ class CronService {
         this.createFeedJob(feed);
       }
       
-      console.log(`已为 ${feeds.length} 个订阅源创建定时任务`);
+      logger.info(`已为 ${feeds.length} 个订阅源创建定时任务`);
     } catch (error) {
-      console.error('初始化订阅源定时任务失败:', error);
+      logger.error('初始化订阅源定时任务失败:', { error });
     }
   }
   
@@ -97,7 +98,7 @@ class CronService {
             jobInfo.job.stop();
           }
           this.feedJobs.delete(feedId);
-          console.log(`已移除订阅源 ${feedId} 的定时任务`);
+          logger.info(`已移除订阅源 ${feedId} 的定时任务`);
         }
       }
       
@@ -115,7 +116,7 @@ class CronService {
         }
       }
     } catch (error) {
-      console.error('更新订阅源定时任务失败:', error);
+      logger.error('更新订阅源定时任务失败:', { error });
     }
   }
   
@@ -134,15 +135,15 @@ class CronService {
       cronExpression = `0 */${hours} * * *`; // 每x小时
     }
     
-    console.log(`为订阅源 ${feed.title} (ID: ${feedId}) 创建定时任务，刷新间隔: ${refreshInterval}分钟，Cron: ${cronExpression}`);
+    logger.debug(`为订阅源 ${feed.title} (ID: ${feedId}) 创建定时任务，刷新间隔: ${refreshInterval}分钟，Cron: ${cronExpression}`);
     
     const job = cron.schedule(cronExpression, async () => {
-      console.log(`开始获取订阅源: ${feed.title} (ID: ${feedId})`);
+      logger.debug(`开始获取订阅源: ${feed.title} (ID: ${feedId})`);
       try {
         const result = await rssService.fetchFeed(feed);
-        console.log(`订阅源 ${feed.title} (ID: ${feedId}) 获取完成，新增 ${result?.newArticles || 0} 篇文章`);
+        logger.info(`订阅源 ${feed.title} (ID: ${feedId}) 获取完成，新增 ${result?.newArticles || 0} 篇文章`);
       } catch (error) {
-        console.error(`订阅源 ${feed.title} (ID: ${feedId}) 获取失败:`, error);
+        logger.error(`订阅源 ${feed.title} (ID: ${feedId}) 获取失败:`, { error });
       }
     });
     
@@ -155,16 +156,16 @@ class CronService {
   // 停止定时任务
   stop() {
     if (!this.isRunning) {
-      console.log('定时任务未在运行');
+      logger.info('定时任务未在运行');
       return;
     }
 
-    console.log('停止定时任务服务');
+    logger.info('停止定时任务服务');
 
     // 停止全局任务
     this.jobs.forEach((job, name) => {
       job.stop();
-      console.log(`- ${name} 任务已停止`);
+      logger.debug(`- ${name} 任务已停止`);
     });
     this.jobs.clear();
     
@@ -174,21 +175,21 @@ class CronService {
       jobInfo.job.stop();
       feedCount++;
     });
-    console.log(`- ${feedCount} 个订阅源任务已停止`);
+    logger.debug(`- ${feedCount} 个订阅源任务已停止`);
     this.feedJobs.clear();
     
     this.isRunning = false;
 
-    console.log('定时任务停止完成');
+    logger.info('定时任务停止完成');
   }
 
   // 手动执行RSS获取任务
   async runFetchTask() {
-    console.log('手动执行RSS获取任务');
+    logger.info('手动执行RSS获取任务');
     try {
       // 获取所有活跃的订阅源
       const feeds = await database.all('SELECT * FROM feeds WHERE status = ?', ['active']);
-      console.log(`开始获取 ${feeds.length} 个订阅源的内容`);
+      logger.info(`开始获取 ${feeds.length} 个订阅源的内容`);
       
       const results = [];
       for (const feed of feeds) {
@@ -201,7 +202,7 @@ class CronService {
             newArticles: result?.newArticles || 0
           });
         } catch (error) {
-          console.error(`订阅源 ${feed.title} (ID: ${feed.id}) 获取失败:`, error);
+          logger.error(`订阅源 ${feed.title} (ID: ${feed.id}) 获取失败:`, { error });
           results.push({
             feedId: feed.id,
             title: feed.title,
@@ -211,20 +212,20 @@ class CronService {
         }
       }
       
-      console.log('手动RSS获取任务完成');
+      logger.info('手动RSS获取任务完成');
       return {
         totalFeeds: feeds.length,
         results: results
       };
     } catch (error) {
-      console.error('手动RSS获取任务失败:', error);
+      logger.error('手动RSS获取任务失败:', { error });
       throw error;
     }
   }
 
   // 手动执行清理任务
   async runCleanupTask() {
-    console.log('手动执行清理任务');
+    logger.info('手动执行清理任务');
     try {
       const articleCount = await rssService.cleanupOldArticles(30);
       const logCount = await scriptService.cleanupOldLogs(7);
@@ -234,10 +235,10 @@ class CronService {
         cleanedLogs: logCount
       };
       
-      console.log('手动清理任务完成:', result);
+      logger.info('手动清理任务完成', result);
       return result;
     } catch (error) {
-      console.error('手动清理任务失败:', error);
+      logger.error('手动清理任务失败:', { error });
       throw error;
     }
   }
@@ -270,7 +271,7 @@ class CronService {
         try {
           await rssService.fetchAllFeeds();
         } catch (error) {
-          console.error('定时获取RSS内容失败:', error);
+          logger.error('定时获取RSS内容失败:', { error });
         }
       });
     } else if (taskName === 'cleanup') {
@@ -279,7 +280,7 @@ class CronService {
           await rssService.cleanupOldArticles(30);
           await scriptService.cleanupOldLogs(7);
         } catch (error) {
-          console.error('清理旧数据失败:', error);
+          logger.error('清理旧数据失败:', { error });
         }
       });
     }
@@ -287,7 +288,7 @@ class CronService {
     if (newJob) {
       newJob.start();
       this.jobs.set(taskName, newJob);
-      console.log(`任务 ${taskName} 调度已更新为: ${cronExpression}`);
+      logger.info(`任务 ${taskName} 调度已更新为: ${cronExpression}`);
     }
   }
 }

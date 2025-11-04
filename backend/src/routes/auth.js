@@ -1,6 +1,7 @@
 const express = require('express');
 const User = require('../models/User');
 const { generateToken, authenticateToken } = require('../middleware/auth');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -34,7 +35,7 @@ router.post('/register', async (req, res) => {
       user: { id: userId, username, email }
     });
   } catch (error) {
-    console.error('注册错误:', error);
+    logger.error('注册错误:', { error });
     res.status(500).json({ error: '注册失败' });
   }
 });
@@ -73,7 +74,7 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('登录错误:', error);
+    logger.error('登录错误:', { error });
     res.status(500).json({ error: '登录失败' });
   }
 });
@@ -90,7 +91,7 @@ router.get('/me', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('获取用户信息错误:', error);
+    logger.error('获取用户信息错误:', { error });
     res.status(500).json({ error: '获取用户信息失败' });
   }
 });
@@ -121,7 +122,7 @@ router.put('/password', authenticateToken, async (req, res) => {
 
     res.json({ message: '密码修改成功' });
   } catch (error) {
-    console.error('修改密码错误:', error);
+    logger.error('修改密码错误:', { error });
     res.status(500).json({ error: '修改密码失败' });
   }
 });

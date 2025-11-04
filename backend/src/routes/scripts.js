@@ -5,6 +5,7 @@ const Script = require('../models/Script');
 const { authenticateToken } = require('../middleware/auth');
 const scriptService = require('../services/scriptService');
 const {parseRss} = require("../utils/rssPharse");
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -87,7 +88,7 @@ router.post('/test', authenticateToken, async (req, res) => {
       results: results
     });
   } catch (error) {
-    console.error('脚本测试错误:', error);
+    logger.error('脚本测试错误:', { error });
     res.status(500).json({ 
       success: false,
       message: '脚本测试失败',
@@ -115,7 +116,7 @@ router.get('/logs/:feedId', authenticateToken, async (req, res) => {
 
     res.json({ logs });
   } catch (error) {
-    console.error('获取脚本日志错误:', error);
+    logger.error('获取脚本日志错误:', { error });
     res.status(500).json({ error: '获取脚本日志失败' });
   }
 });
@@ -147,7 +148,7 @@ router.post('/', authenticateToken, async (req, res) => {
       data: newScript 
     });
   } catch (error) {
-    console.error('创建脚本错误:', error);
+    logger.error('创建脚本错误:', { error });
     res.status(500).json({ 
       success: false,
       message: '创建脚本失败',
@@ -170,7 +171,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     res.json({ script });
   } catch (error) {
-    console.error('获取脚本列表错误:', error);
+    logger.error('获取脚本列表错误:', { error });
     res.status(500).json({ error: '获取脚本列表失败' });
   }
 });
@@ -192,7 +193,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
     res.json({ script });
   } catch (error) {
-    console.error('获取脚本错误:', error);
+    logger.error('获取脚本错误:', { error });
     res.status(500).json({ error: '获取脚本失败' });
   }
 });
@@ -230,7 +231,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       data: updatedScript 
     });
   } catch (error) {
-    console.error('更新脚本错误:', error);
+    logger.error('更新脚本错误:', { error });
     res.status(500).json({ 
       success: false,
       message: '更新脚本失败',
@@ -251,7 +252,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     await Script.delete(req.params.id,req.user.id);
     res.json({ message: '脚本删除成功' });
   } catch (error) {
-    console.error('删除脚本错误:', error);
+    logger.error('删除脚本错误:', { error });
     res.status(500).json({ error: '删除脚本失败' });
   }
 });

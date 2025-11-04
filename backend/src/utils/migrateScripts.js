@@ -10,6 +10,7 @@
  */
 
 const database = require('./database');
+const logger = require('./logger');
 
 // 系统模板定义
 const systemTemplates = [
@@ -104,11 +105,11 @@ function processArticle(article, rawItem) {
 
 async function migrateScripts() {
   try {
-    console.log('开始数据库迁移...');
+    logger.info('开始数据库迁移...');
     
     // 连接数据库
     await database.connect();
-    console.log('数据库连接成功');
+    logger.info('数据库连接成功');
 
     // 检查是否已经存在scripts表
     const scriptsTableExists = await database.get(
@@ -117,7 +118,7 @@ async function migrateScripts() {
     
     // 如果scripts表不存在，创建它
     if (!scriptsTableExists) {
-      console.log('创建scripts表...');
+      logger.info('创建scripts表...');
       await database.run(`
         CREATE TABLE IF NOT EXISTS scripts (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,13 +132,13 @@ async function migrateScripts() {
           FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )
       `);
-      console.log('scripts表创建完成');
+      logger.info('scripts表创建完成');
       
       // 创建索引
       await database.run('CREATE INDEX IF NOT EXISTS idx_scripts_user_id ON scripts (user_id)');
       await database.run('CREATE INDEX IF NOT EXISTS idx_scripts_is_template ON scripts (is_template)');
     } else {
-      console.log('scripts表已存在，跳过创建');
+      logger.info('scripts表已存在，跳过创建');
     }
 
     // 检查feeds表是否有script_id字段
@@ -146,12 +147,12 @@ async function migrateScripts() {
     
     // 如果没有script_id字段，添加它
     if (!hasScriptIdColumn) {
-      console.log('向feeds表添加script_id字段...');
+      logger.info('向feeds表添加script_id字段...');
       await database.run('ALTER TABLE feeds ADD COLUMN script_id INTEGER REFERENCES scripts(id) ON DELETE SET NULL');
       await database.run('CREATE INDEX IF NOT EXISTS idx_feeds_script_id ON feeds (script_id)');
-      console.log('script_id字段添加完成');
+      logger.info('script_id字段添加完成');
     } else {
-      console.log('feeds表已有script_id字段，跳过添加');
+      logger.info('feeds表已有script_id字段，跳过添加');
     }
 
     // 获取所有包含script的feeds
@@ -159,13 +160,13 @@ async function migrateScripts() {
       "SELECT id, user_id, title, script FROM feeds WHERE script IS NOT NULL AND script != ''"
     );
     
-    console.log(`找到 ${feedsWithScripts.length} 个包含脚本的订阅源`);
+    logger.info(`找到 ${feedsWithScripts.length} 个包含脚本的订阅源`);
     
     // 为每个脚本创建一条记录并更新feed
     for (const feed of feedsWithScripts) {
       if (!feed.script) continue;
       
-      console.log(`处理订阅源 ID: ${feed.id}, 标题: ${feed.title}`);
+      logger.debug(`处理订阅源 ID: ${feed.id}, 标题: ${feed.title}`);
       
       // 创建脚本记录
       const scriptName = `${feed.title} 的处理脚本`;
@@ -175,7 +176,7 @@ async function migrateScripts() {
       );
       
       const scriptId = result.id;
-      console.log(`创建脚本记录，ID: ${scriptId}`);
+      logger.info(`创建脚本记录，ID: ${scriptId}`);
       
       // 更新feed记录，设置script_id并清空script字段
       await database.run(
@@ -183,11 +184,11 @@ async function migrateScripts() {
         [scriptId, feed.id]
       );
       
-      console.log(`更新订阅源 ID: ${feed.id} 的script_id为 ${scriptId}`);
+      logger.info(`更新订阅源 ID: ${feed.id} 的script_id为 ${scriptId}`);
     }
     
     // 插入系统模板
-    console.log('开始插入系统模板...');
+    logger.info('开始插入系统模板...');
     const existingTemplates = await database.all('SELECT * FROM scripts WHERE is_template = 1');
     
     if (existingTemplates.length === 0) {
@@ -196,17 +197,17 @@ async function migrateScripts() {
           'INSERT INTO scripts (user_id, name, description, script, is_template, created_at, updated_at) VALUES (?, ?, ?, ?, 1, datetime("now"), datetime("now"))',
           [1, template.name, template.description, template.script]
         );
-        console.log(`插入系统模板: ${template.name}`);
+        logger.info(`插入系统模板: ${template.name}`);
       }
-      console.log('系统模板插入完成');
+      logger.info('系统模板插入完成');
     } else {
-      console.log(`已存在 ${existingTemplates.length} 个系统模板，跳过插入`);
+      logger.info(`已存在 ${existingTemplates.length} 个系统模板，跳过插入`);
     }
     
-    console.log('数据迁移完成！');
+    logger.info('数据迁移完成！');
     
   } catch (error) {
-    console.error('数据库迁移失败:', error);
+    logger.error('数据库迁移失败:', { error });
     throw error;
   } finally {
     await database.close();
@@ -217,11 +218,11 @@ async function migrateScripts() {
 if (require.main === module) {
   migrateScripts()
     .then(() => {
-      console.log('数据库迁移成功');
+      logger.info('数据库迁移成功');
       process.exit(0);
     })
     .catch((error) => {
-      console.error('数据库迁移失败:', error);
+      logger.error('数据库迁移失败:', { error });
       process.exit(1);
     });
 }
