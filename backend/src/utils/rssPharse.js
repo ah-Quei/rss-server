@@ -90,10 +90,10 @@ async function parseRss(url) {
 
         const article = {
             title: item.title || '无标题',
-            link: item.link || '',
+            link: item.link,
             description: item.description|| item.summary||item.contentSnippet|| '',
             pubDate: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
-            guid: item.guid || item.link || '',
+            guid: item.guid,
             content: item.content || '',
             rawJson: rawJson  // 保存原始item对象的json序列化数据
         };

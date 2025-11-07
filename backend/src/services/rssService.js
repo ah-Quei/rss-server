@@ -39,14 +39,8 @@ class RssService {
 
       for (const article of articles) {
         try {
-          // 检查文章是否已存在（通过guid或链接）
-          const existingArticle = await Article.findByGuidOrLink(feed.id, article.guid || article.link || '');
-          
-          // 如果文章已存在，跳过
-          if (existingArticle) {
-            continue;
-          }
 
+          
           article['feedId'] = feed.id;
 
           // 保存文章到数据库
