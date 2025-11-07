@@ -13,7 +13,7 @@ class Article extends BaseModel {
         const {feedId, title, link, description, pubDate, guid, content, rawJson} = articleData;
 
         // 检查是否已存在相同的文章
-        const existingArticle = await this.findByRawJson(feedId, rawJson);
+        const existingArticle = await this.findByGuid(feedId, guid);
 
         if (existingArticle) {
             return 0;
@@ -151,10 +151,10 @@ class Article extends BaseModel {
         };
     }
 
-    static async findByRawJson(feedId, rawJson) {
+    static async findByGuid(feedId, guid) {
         const result = await super.rawQuery(
-            'SELECT * FROM articles WHERE feed_id = ? AND raw_json = ?',
-            [feedId, rawJson]
+            'SELECT * FROM articles WHERE feed_id = ? AND guid = ?',
+            [feedId, guid]
         );
         return result.length > 0 ? result[0] : null;
     }
